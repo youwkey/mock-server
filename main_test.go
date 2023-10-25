@@ -6,21 +6,112 @@ package main
 
 import (
 	"bytes"
+	"flag"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strconv"
 	"testing"
 )
 
-func Test(t *testing.T) {
+//nolint:tparallel
+func TestParseOptions(t *testing.T) {
 	t.Parallel()
 
-	buf := new(bytes.Buffer)
-	out = buf
+	tests := []struct {
+		name  string
+		flags map[string]string
+		want  options
+	}{
+		{name: "without flags", flags: map[string]string{}, want: options{
+			flags: flags{rootDir: defaultMountDir, host: defaultListenHost, port: defaultListenPort},
+			addr:  defaultListenHost + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+		}},
+		{name: "with dir flag", flags: map[string]string{"dir": "./testdata"}, want: options{
+			flags: flags{rootDir: "./testdata", host: defaultListenHost, port: defaultListenPort},
+			addr:  defaultListenHost + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+		}},
+		{name: "with host flag", flags: map[string]string{"host": "127.0.0.1"}, want: options{
+			flags: flags{rootDir: defaultMountDir, host: "127.0.0.1", port: defaultListenPort},
+			addr:  "127.0.0.1" + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+		}},
+		{name: "with port flag", flags: map[string]string{"port": "8080"}, want: options{
+			flags: flags{rootDir: defaultMountDir, host: defaultListenHost, port: 8080},
+			addr:  defaultListenHost + ":8080",
+		}},
+	}
 
-	main()
+	//nolint:paralleltest
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				// reset flags
+				for k := range test.flags {
+					if err := flag.CommandLine.Set(k, flag.Lookup(k).DefValue); err != nil {
+						t.Fatal(err)
+					}
+				}
+			})
+			for k, v := range test.flags {
+				if err := flag.CommandLine.Set(k, v); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got := parseOptions()
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("got: %+v want: %+v", got, test.want)
+			}
+		})
+	}
+}
 
-	got := buf.String()
-	want := "Hello, World!\n"
+func TestBuildHandler(t *testing.T) {
+	t.Parallel()
 
-	if got != want {
-		t.Errorf("got: %s want: %s", got, want)
+	const rootDir = "./testdata/static"
+	handler := buildHandler(rootDir)
+	testServer := httptest.NewServer(handler)
+	client := new(http.Client)
+
+	t.Cleanup(func() {
+		testServer.Close()
+	})
+
+	tests := []struct {
+		name          string
+		filename      string
+		status        int
+		ignoreContent bool
+	}{
+		{name: "access html", filename: "index.html", status: 200, ignoreContent: false},
+		{name: "access js", filename: "script.js", status: 200, ignoreContent: false},
+		{name: "access css", filename: "style.css", status: 200, ignoreContent: false},
+		{name: "not found", filename: "not_exits.html", status: 404, ignoreContent: true},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			//nolint:noctx
+			res, _ := client.Get(testServer.URL + "/" + test.filename)
+			t.Cleanup(func() {
+				_ = res.Body.Close()
+			})
+			if res.StatusCode != test.status {
+				t.Fatalf("statusCode mismatched: got: %d want %d", res.StatusCode, test.status)
+			}
+			if test.ignoreContent {
+				return
+			}
+			want, _ := os.ReadFile(filepath.Join(rootDir, test.filename))
+			got, _ := io.ReadAll(res.Body)
+			if !bytes.Equal(got, want) {
+				t.Errorf("content mismatched: %s", test.filename)
+			}
+		})
 	}
 }
