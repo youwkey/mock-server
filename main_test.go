@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 )
 
@@ -27,20 +26,20 @@ func TestParseOptions(t *testing.T) {
 		want  options
 	}{
 		{name: "without flags", flags: map[string]string{}, want: options{
-			flags: flags{rootDir: defaultMountDir, host: defaultListenHost, port: defaultListenPort},
-			addr:  defaultListenHost + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+			flags: flags{rootDir: defaultMountDir, allHost: defaultAllHost, port: defaultListenPort},
+			addr:  "127.0.0.1:" + defaultListenPort,
 		}},
 		{name: "with dir flag", flags: map[string]string{"dir": "./testdata"}, want: options{
-			flags: flags{rootDir: "./testdata", host: defaultListenHost, port: defaultListenPort},
-			addr:  defaultListenHost + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+			flags: flags{rootDir: "./testdata", allHost: defaultAllHost, port: defaultListenPort},
+			addr:  "127.0.0.1:" + defaultListenPort,
 		}},
-		{name: "with host flag", flags: map[string]string{"host": "127.0.0.1"}, want: options{
-			flags: flags{rootDir: defaultMountDir, host: "127.0.0.1", port: defaultListenPort},
-			addr:  "127.0.0.1" + ":" + strconv.FormatUint(uint64(defaultListenPort), 10),
+		{name: "with all flag", flags: map[string]string{"all": "true"}, want: options{
+			flags: flags{rootDir: defaultMountDir, allHost: true, port: defaultListenPort},
+			addr:  "0.0.0.0" + ":" + defaultListenPort,
 		}},
 		{name: "with port flag", flags: map[string]string{"port": "8080"}, want: options{
-			flags: flags{rootDir: defaultMountDir, host: defaultListenHost, port: 8080},
-			addr:  defaultListenHost + ":8080",
+			flags: flags{rootDir: defaultMountDir, allHost: defaultAllHost, port: "8080"},
+			addr:  "127.0.0.1:8080",
 		}},
 	}
 

@@ -9,21 +9,20 @@ import (
 	"flag"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 )
 
 const (
 	defaultMountDir          = "./"
-	defaultListenHost        = "localhost"
-	defaultListenPort        = 3000
+	defaultAllHost           = false
+	defaultListenPort        = "3333"
 	defaultReadHeaderTimeout = 3
 )
 
 type flags struct {
 	rootDir string
-	host    string
-	port    uint
+	allHost bool
+	port    string
 }
 
 type options struct {
@@ -34,26 +33,31 @@ type options struct {
 //nolint:gochecknoglobals
 var (
 	fRootDir string
-	fHost    string
-	fPort    uint
+	fAllHost bool
+	fPort    string
 )
 
 //nolint:gochecknoinits
 func init() {
 	flag.StringVar(&fRootDir, "dir", defaultMountDir, "mount root directory")
-	flag.StringVar(&fHost, "host", defaultListenHost, "listen host")
-	flag.UintVar(&fPort, "port", defaultListenPort, "listen port")
+	flag.BoolVar(&fAllHost, "all", defaultAllHost, "if set, bind any host 0.0.0.0")
+	flag.StringVar(&fPort, "port", defaultListenPort, "listen port")
 }
 
 func parseOptions() options {
 	flag.Parse()
 
-	addr := fHost + ":" + strconv.FormatUint(uint64(fPort), 10)
+	host := "127.0.0.1"
+	if fAllHost {
+		host = "0.0.0.0"
+	}
+
+	addr := host + ":" + fPort
 
 	return options{
 		flags: flags{
 			rootDir: fRootDir,
-			host:    fHost,
+			allHost: fAllHost,
 			port:    fPort,
 		},
 		addr: addr,
@@ -67,15 +71,16 @@ func buildHandler(rootDir string) http.Handler {
 func main() {
 	opts := parseOptions()
 	handler := buildHandler(opts.rootDir)
+
 	//nolint:exhaustruct
 	server := &http.Server{
-		Addr:              "localhost:3000",
+		Addr:              opts.addr,
 		Handler:           handler,
 		ReadHeaderTimeout: defaultReadHeaderTimeout * time.Second,
 	}
 
 	slog.Info("root dir mounted.", "dir", opts.rootDir)
-	slog.Info("server started.", "address", "http://"+opts.addr)
+	slog.Info("server started.", "address", "http://localhost:"+opts.port)
 
 	if err := server.ListenAndServe(); err != nil {
 		slog.Error(err.Error())
