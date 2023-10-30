@@ -69,7 +69,7 @@ func main() {
 	handler := buildHandler(opts.rootDir)
 	//nolint:exhaustruct
 	server := &http.Server{
-		Addr:              "localhost:3000",
+		Addr:              opts.addr,
 		Handler:           handler,
 		ReadHeaderTimeout: defaultReadHeaderTimeout * time.Second,
 	}
