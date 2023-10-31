@@ -26,19 +26,19 @@ func TestParseOptions(t *testing.T) {
 		want  options
 	}{
 		{name: "without flags", flags: map[string]string{}, want: options{
-			flags: flags{rootDir: defaultMountDir, allHost: defaultAllHost, port: defaultListenPort},
+			flags: flags{version: false, rootDir: defaultMountDir, allHost: defaultAllHost, port: defaultListenPort},
 			addr:  "127.0.0.1:" + defaultListenPort,
 		}},
 		{name: "with dir flag", flags: map[string]string{"dir": "./testdata"}, want: options{
-			flags: flags{rootDir: "./testdata", allHost: defaultAllHost, port: defaultListenPort},
+			flags: flags{version: false, rootDir: "./testdata", allHost: defaultAllHost, port: defaultListenPort},
 			addr:  "127.0.0.1:" + defaultListenPort,
 		}},
 		{name: "with all flag", flags: map[string]string{"all": "true"}, want: options{
-			flags: flags{rootDir: defaultMountDir, allHost: true, port: defaultListenPort},
+			flags: flags{version: false, rootDir: defaultMountDir, allHost: true, port: defaultListenPort},
 			addr:  "0.0.0.0" + ":" + defaultListenPort,
 		}},
 		{name: "with port flag", flags: map[string]string{"port": "8080"}, want: options{
-			flags: flags{rootDir: defaultMountDir, allHost: defaultAllHost, port: "8080"},
+			flags: flags{version: false, rootDir: defaultMountDir, allHost: defaultAllHost, port: "8080"},
 			addr:  "127.0.0.1:8080",
 		}},
 	}

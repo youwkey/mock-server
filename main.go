@@ -7,6 +7,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -20,6 +21,7 @@ const (
 )
 
 type flags struct {
+	version bool
 	rootDir string
 	allHost bool
 	port    string
@@ -32,6 +34,10 @@ type options struct {
 
 //nolint:gochecknoglobals
 var (
+	version  = "dev"
+	commit   = "none"
+	date     = "unknown"
+	fVersion bool
 	fRootDir string
 	fAllHost bool
 	fPort    string
@@ -39,6 +45,7 @@ var (
 
 //nolint:gochecknoinits
 func init() {
+	flag.BoolVar(&fVersion, "version", false, "print the current version")
 	flag.StringVar(&fRootDir, "dir", defaultMountDir, "mount root directory")
 	flag.BoolVar(&fAllHost, "all", defaultAllHost, "if set, bind any host 0.0.0.0")
 	flag.StringVar(&fPort, "port", defaultListenPort, "listen port")
@@ -56,6 +63,7 @@ func parseOptions() options {
 
 	return options{
 		flags: flags{
+			version: fVersion,
 			rootDir: fRootDir,
 			allHost: fAllHost,
 			port:    fPort,
@@ -70,6 +78,14 @@ func buildHandler(rootDir string) http.Handler {
 
 func main() {
 	opts := parseOptions()
+
+	if opts.version {
+		//nolint:forbidigo
+		fmt.Printf("version=%s, commit=%s, date=%s\n", version, commit, date)
+
+		return
+	}
+
 	handler := buildHandler(opts.rootDir)
 
 	//nolint:exhaustruct
