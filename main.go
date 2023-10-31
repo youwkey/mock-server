@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 )
 
@@ -34,9 +35,7 @@ type options struct {
 
 //nolint:gochecknoglobals
 var (
-	version  = "dev"
-	commit   = "none"
-	date     = "unknown"
+	version  = "unknown"
 	fVersion bool
 	fRootDir string
 	fAllHost bool
@@ -49,6 +48,14 @@ func init() {
 	flag.StringVar(&fRootDir, "dir", defaultMountDir, "mount root directory")
 	flag.BoolVar(&fAllHost, "all", defaultAllHost, "if set, bind any host 0.0.0.0")
 	flag.StringVar(&fPort, "port", defaultListenPort, "listen port")
+
+	if version == "unknown" {
+		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
+			version = info.Main.Version
+
+			return
+		}
+	}
 }
 
 func parseOptions() options {
@@ -81,7 +88,7 @@ func main() {
 
 	if opts.version {
 		//nolint:forbidigo
-		fmt.Printf("version=%s, commit=%s, date=%s\n", version, commit, date)
+		fmt.Printf("version=%s\n", version)
 
 		return
 	}
